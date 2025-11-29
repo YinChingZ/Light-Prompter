@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>轻量级提词器（单文件）</title>
+    <style>
+/* Inlined from style.css */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f4f4f4;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+h2 {
+    margin-bottom: 15px;
+}
+
+.setup-panel {
+    margin-bottom: 20px;
+}
+
+.input-section {
+    margin-bottom: 20px;
+}
+
+textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.control-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input[type="range"] {
+    width: 80%;
+    margin-right: 10px;
+}
+
+.buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+button {
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.fullscreen-btn {
+    background-color: #2196F3;
+}
+
+.fullscreen-btn:hover {
+    background-color: #0b7dda;
+}
+
+.teleprompter-container {
+    position: relative;
+    background-color: #000;
+    width: 100%;
+    height: 300px;
+    border-radius: 5px;
+    overflow: hidden;
+    transition: height 0.3s ease;
+}
+
+.teleprompter-viewport {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+.teleprompter-text {
+    width: 80%;
+    margin: 0 auto;
+    padding: 20px;
+    color: white;
+    font-size: 36px;
+    line-height: 1.5;
+    text-align: center;
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.center-marker {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    background-color: rgba(255, 0, 0, 0.5);
+    pointer-events: none;
+}
+
+.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 9999;
+    border-radius: 0;
+}
+
+.fullscreen-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px;
+    border-radius: 10px;
+    display: flex;
+    gap: 20px;
+    z-index: 10000;
+    display: none;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    max-width: 90%;
+}
+
+.fs-control-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.fs-button {
+    padding: 8px 12px;
+    font-size: 14px;
+    min-width: 80px;
+}
+
+.fs-control-group label {
+    color: white;
+    font-weight: normal;
+    margin-bottom: 0;
+}
+
+.fs-control-group input[type="range"] {
+    width: 100px;
+}
+
+.fs-control-group span {
+    color: white;
+    min-width: 50px;
+}
+
+@media (max-width: 768px) {
+    .controls {
+        flex-direction: column;
+    }
+    
+    .control-group {
+        width: 100%;
+    }
+    
+    .teleprompter-text {
+        width: 90%;
+    }
+    
+    .fullscreen-controls {
+        flex-direction: column;
+    }
+}
+
+.teleprompter-text {
+    width: 80%;
+    margin: 0 auto;
+    padding: 20px;
+    color: white;
+    font-size: 36px;
+    line-height: 1.5;
+    text-align: center;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.teleprompter-viewport {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+    will-change: transform;
+}
+
+.teleprompter-text {
+    width: 80%;
+    padding: 20px;
+    color: white;
+    font-size: 36px;
+    line-height: 1.5;
+    text-align: center;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    will-change: transform;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.pause-marker {
+    display: inline;
+    width: 0;
+    height: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    overflow: hidden;
+    position: relative;
+    pointer-events: none;
+}
+
+.pause-marker {
+    display: inline;
+    width: 0;
+    height: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    position: relative;
+    vertical-align: middle;
+    color: transparent;
+    pointer-events: none;
+    font-size: 0;
+}
+
+.pause-marker.debug-visible {
+    background-color: rgba(255, 0, 0, 0.2);
+    color: yellow;
+    padding: 0 3px;
+    font-size: inherit;
+    border: 1px dotted red;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>轻量级提词器</h1>
+        
+        <div class="setup-panel">
+            <h2>设置</h2>
+            <div class="input-section">
+                <label for="promptText">输入文本:</label>
+                <textarea id="promptText" rows="10" placeholder="在此输入您需要提示的文本。添加暂停请使用[暂停:秒数]，例如[暂停:2]将暂停2秒"></textarea>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="speedControl">滚动速度:</label>
+                    <input type="range" id="speedControl" min="0.1" max="20" step="0.1" value="3">
+                    <span id="speedValue">3.0</span>
+                </div>
+                
+                <div class="control-group">
+                    <label for="fontSizeControl">字体大小:</label>
+                    <input type="range" id="fontSizeControl" min="16" max="240" value="36">
+                    <span id="fontSizeValue">36px</span>
+                </div>
+                
+                <div class="control-group">
+                    <label for="widthControl">显示区域宽度:</label>
+                    <input type="range" id="widthControl" min="50" max="100" value="80">
+                    <span id="widthValue">80%</span>
+                </div>
+                
+                <div class="control-group">
+                    <label for="horizontalPosControl">水平位置调整:</label>
+                    <input type="range" id="horizontalPosControl" min="-20" max="20" value="0">
+                    <span id="horizontalPosValue">居中</span>
+                </div>
+                
+                <div class="control-group">
+                    <label for="heightControl">显示区域高度:</label>
+                    <input type="range" id="heightControl" min="200" max="800" value="300">
+                    <span id="heightValue">300px</span>
+                </div>
+            </div>
+            
+            <div class="buttons">
+                <button id="startButton">开始提词</button>
+                <button id="pauseButton" disabled>暂停</button>
+                <button id="resetButton" disabled>重置</button>
+                <button id="fullscreenButton" class="fullscreen-btn">全屏模式</button>
+            </div>
+        </div>
+        
+        <div id="teleprompterContainer" class="teleprompter-container">
+            <div class="teleprompter-viewport">
+                <div id="teleprompterText" class="teleprompter-text"></div>
+            </div>
+            <div class="center-marker"></div>
+            
+            <!-- 全屏模式下的控制面板 -->
+            <div id="fullscreenControls" class="fullscreen-controls">
+                <div class="fs-control-group">
+                    <button id="fsStartButton" class="fs-button">开始提词</button>
+                    <button id="fsPauseButton" class="fs-button" disabled>暂停</button>
+                    <button id="fsResetButton" class="fs-button" disabled>重置</button>
+                    <button id="fsExitButton" class="fs-button">退出全屏</button>
+                </div>
+                <div class="fs-control-group">
+                    <label>速度:</label>
+                    <input type="range" id="fsSpeedControl" min="0.1" max="20" step="0.1" value="3">
+                    <span id="fsSpeedValue">3.0</span>
+                </div>
+                <div class="fs-control-group">
+                    <label>字体:</label>
+                    <input type="range" id="fsFontSizeControl" min="16" max="240" value="36">
+                    <span id="fsFontSizeValue">36px</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+// Inlined from script.js
+document.addEventListener('DOMContentLoaded', function() {
+    // 获取DOM元素
+    const promptText = document.getElementById('promptText');
+    const speedControl = document.getElementById('speedControl');
+    const speedValue = document.getElementById('speedValue');
+    const fontSizeControl = document.getElementById('fontSizeControl');
+    const fontSizeValue = document.getElementById('fontSizeValue');
+    const widthControl = document.getElementById('widthControl');
+    const widthValue = document.getElementById('widthValue');
+    const horizontalPosControl = document.getElementById('horizontalPosControl');
+    const horizontalPosValue = document.getElementById('horizontalPosValue');
+    const heightControl = document.getElementById('heightControl');
+    const heightValue = document.getElementById('heightValue');
+    const startButton = document.getElementById('startButton');
+    const pauseButton = document.getElementById('pauseButton');
+    const resetButton = document.getElementById('resetButton');
+    const fullscreenButton = document.getElementById('fullscreenButton');
+    const teleprompterText = document.getElementById('teleprompterText');
+    const teleprompterContainer = document.getElementById('teleprompterContainer');
+    const fullscreenControls = document.getElementById('fullscreenControls');
+    const fsStartButton = document.getElementById('fsStartButton');
+    const fsExitButton = document.getElementById('fsExitButton');
+    const fsPauseButton = document.getElementById('fsPauseButton');
+    const fsResetButton = document.getElementById('fsResetButton');
+    const fsSpeedControl = document.getElementById('fsSpeedControl');
+    const fsFontSizeControl = document.getElementById('fsFontSizeControl');
+    const fsFontSizeValue = document.getElementById('fsFontSizeValue');
+    const fsSpeedValue = document.getElementById('fsSpeedValue'); // 获取全屏速度显示元素
+    
+    // 提词器状态
+    let isRunning = false;
+    let animationId = null;
+    let scrollSpeed = parseFloat(speedControl.value);
+    let currentScrollTop = 0;
+    let textContent = "";
+    let pauseMarkers = [];
+    let displayWidth = 80;
+    let horizontalOffset = 0;
+    let isFullscreen = false;
+    let lastTimestamp = 0;
+    let totalDistance = 0;
+    let userPaused = false;
+    let activePauseTimeout = null;
+    let pauseElements = []; // 存储暂停标记元素引用
+    let fontSize = parseInt(fontSizeControl.value);
+    let currentPauseIndex = -1; // 跟踪当前处理的暂停点
+    let debugMode = false; // 调试模式开关
+    
+    // 更新速度显示 - 修改为1位小数的精度
+    speedControl.addEventListener('input', function() {
+        scrollSpeed = parseFloat(this.value);
+        speedValue.textContent = scrollSpeed.toFixed(1); // 显示1位小数
+        fsSpeedControl.value = this.value;
+        fsSpeedValue.textContent = scrollSpeed.toFixed(1); // 同步全屏模式显示
+        
+        if (isRunning) {
+            // 在运行时调整，立即应用新速度
+            lastTimestamp = performance.now(); // 重置时间戳避免跳跃
+        }
+    });
+    
+    // 全屏模式下的速度控制 - 同样修改为1位小数精度
+    fsSpeedControl.addEventListener('input', function() {
+        scrollSpeed = parseFloat(this.value);
+        speedControl.value = this.value;
+        speedValue.textContent = scrollSpeed.toFixed(1);
+        fsSpeedValue.textContent = scrollSpeed.toFixed(1);
+        
+        if (isRunning) {
+            // 在运行时调整，立即应用新速度
+            lastTimestamp = performance.now(); // 重置时间戳避免跳跃
+        }
+    });
+    
+    // 更新字体大小显示
+    fontSizeControl.addEventListener('input', function() {
+        const oldTextHeight = teleprompterText.offsetHeight;
+        const scrollRatio = oldTextHeight > 0 ? currentScrollTop / oldTextHeight : 0;
+        
+        fontSize = parseInt(this.value);
+        updateFontSize(fontSize);
+        
+        if (isRunning && oldTextHeight > 0) {
+            const newTextHeight = teleprompterText.offsetHeight;
+            currentScrollTop = scrollRatio * newTextHeight;
+            totalDistance = currentScrollTop;
+            teleprompterText.style.top = `-${Math.round(currentScrollTop)}px`;
+            recalculatePausePositions();
+        }
+    });
+    
+    fsFontSizeControl.addEventListener('input', function() {
+        fontSizeControl.value = this.value;
+        fontSizeControl.dispatchEvent(new Event('input'));
+    });
+    
+    function updateFontSize(size) {
+        teleprompterText.style.fontSize = size + 'px';
+        fontSizeControl.value = size;
+        fsFontSizeControl.value = size;
+        fontSizeValue.textContent = size + 'px';
+        fsFontSizeValue.textContent = size + 'px';
+    }
+    
+    widthControl.addEventListener('input', function() {
+        const oldTextHeight = teleprompterText.offsetHeight;
+        const scrollRatio = oldTextHeight > 0 ? currentScrollTop / oldTextHeight : 0;
+        
+        displayWidth = parseInt(this.value);
+        teleprompterText.style.width = displayWidth + '%';
+        widthValue.textContent = displayWidth + '%';
+        updateHorizontalPosition();
+        
+        if (isRunning && oldTextHeight > 0) {
+            setTimeout(() => {
+                const newTextHeight = teleprompterText.offsetHeight;
+                currentScrollTop = scrollRatio * newTextHeight;
+                totalDistance = currentScrollTop;
+                teleprompterText.style.top = `-${Math.round(currentScrollTop)}px`;
+                recalculatePausePositions();
+            }, 50);
+        }
+    });
+    
+    horizontalPosControl.addEventListener('input', function() {
+        horizontalOffset = parseInt(this.value);
+        updateHorizontalPosition();
+        
+        if (horizontalOffset === 0) {
+            horizontalPosValue.textContent = '居中';
+        } else if (horizontalOffset > 0) {
+            horizontalPosValue.textContent = '右移 ' + horizontalOffset + '%';
+        } else {
+            horizontalPosValue.textContent = '左移 ' + Math.abs(horizontalOffset) + '%';
+        }
+    });
+    
+    heightControl.addEventListener('input', function() {
+        const height = parseInt(this.value);
+        teleprompterContainer.style.height = height + 'px';
+        heightValue.textContent = height + 'px';
+    });
+    
+    function updateHorizontalPosition() {
+        const offsetPercentage = 50 + horizontalOffset;
+        teleprompterText.style.left = offsetPercentage + '%';
+        teleprompterText.style.transform = `translateX(-${offsetPercentage}%)`;
+    }
+    
+    startButton.addEventListener('click', startPrompterAction);
+    fsStartButton.addEventListener('click', startPrompterAction);
+    
+    function startPrompterAction() {
+        if (!promptText.value.trim()) {
+            alert('请先输入文本');
+            return;
+        }
+        prepareText();
+        startPrompter();
+        startButton.disabled = true;
+        pauseButton.disabled = false;
+        resetButton.disabled = false;
+        fsStartButton.disabled = true;
+        fsPauseButton.disabled = false;
+        fsResetButton.disabled = false;
+        pauseButton.textContent = '暂停';
+        fsPauseButton.textContent = '暂停';
+    }
+    
+    pauseButton.addEventListener('click', togglePause);
+    fsPauseButton.addEventListener('click', togglePause);
+    
+    function togglePause() {
+        if (isRunning) {
+            userPaused = true;
+            stopScrolling();
+            pauseButton.textContent = '继续';
+            fsPauseButton.textContent = '继续';
+        } else {
+            userPaused = false;
+            if (activePauseTimeout) {
+                clearTimeout(activePauseTimeout);
+                activePauseTimeout = null;
+            }
+            startScrolling();
+            pauseButton.textContent = '暂停';
+            fsPauseButton.textContent = '暂停';
+        }
+    }
+    
+    resetButton.addEventListener('click', resetPrompter);
+    fsResetButton.addEventListener('click', resetPrompter);
+    
+    function resetPrompter() {
+        stopScrolling();
+        if (activePauseTimeout) {
+            clearTimeout(activePauseTimeout);
+            activePauseTimeout = null;
+        }
+        userPaused = false;
+        currentScrollTop = 0;
+        totalDistance = 0;
+        currentPauseIndex = -1;
+        teleprompterText.style.top = '0px';
+        teleprompterText.innerHTML = '';
+        pauseElements = [];
+        updateHorizontalPosition();
+        startButton.disabled = false;
+        pauseButton.disabled = true;
+        resetButton.disabled = true;
+        fsStartButton.disabled = false;
+        fsPauseButton.disabled = true;
+        fsResetButton.disabled = true;
+        pauseButton.textContent = '暂停';
+        fsPauseButton.textContent = '暂停';
+    }
+    
+    fullscreenButton.addEventListener('click', toggleFullscreen);
+    fsExitButton.addEventListener('click', toggleFullscreen);
+    
+    function toggleFullscreen() {
+        isFullscreen = !isFullscreen;
+        
+        if (isFullscreen) {
+            teleprompterContainer.classList.add('fullscreen');
+            fullscreenControls.style.display = 'flex';
+            
+            if (teleprompterContainer.requestFullscreen) {
+                teleprompterContainer.requestFullscreen();
+            } else if (teleprompterContainer.mozRequestFullScreen) {
+                teleprompterContainer.mozRequestFullScreen();
+            } else if (teleprompterContainer.webkitRequestFullscreen) {
+                teleprompterContainer.webkitRequestFullscreen();
+            } else if (teleprompterContainer.msRequestFullscreen) {
+                teleprompterContainer.msRequestFullscreen();
+            }
+            
+            fsSpeedControl.value = speedControl.value;
+            fsFontSizeControl.value = fontSizeControl.value;
+            
+            fsStartButton.disabled = startButton.disabled;
+            fsPauseButton.disabled = pauseButton.disabled;
+            fsResetButton.disabled = resetButton.disabled;
+            
+            if (pauseButton.textContent === '继续') {
+                fsPauseButton.textContent = '继续';
+            }
+            
+            document.addEventListener('fullscreenchange', exitFullscreenHandler);
+            document.addEventListener('webkitfullscreenchange', exitFullscreenHandler);
+            document.addEventListener('mozfullscreenchange', exitFullscreenHandler);
+            document.addEventListener('MSFullscreenChange', exitFullscreenHandler);
+        } else {
+            teleprompterContainer.classList.remove('fullscreen');
+            fullscreenControls.style.display = 'none';
+            
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+            
+            document.removeEventListener('fullscreenchange', exitFullscreenHandler);
+            document.removeEventListener('webkitfullscreenchange', exitFullscreenHandler);
+            document.removeEventListener('mozfullscreenchange', exitFullscreenHandler);
+            document.removeEventListener('MSFullscreenChange', exitFullscreenHandler);
+        }
+    }
+    
+    function exitFullscreenHandler() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && 
+            !document.mozFullScreenElement && !document.msFullscreenElement) {
+            isFullscreen = false;
+            teleprompterContainer.classList.remove('fullscreen');
+            fullscreenControls.style.display = 'none';
+        }
+    }
+    
+    function prepareText() {
+        const originalText = promptText.value;
+        pauseMarkers = [];
+        pauseElements = [];
+        currentPauseIndex = -1;
+        
+        let finalHtml = '';
+        let lastIndex = 0;
+        
+        const pausePattern = /\[暂停:(\d+(?:\.\d+)?)\]/g;
+        let match;
+        
+        while ((match = pausePattern.exec(originalText)) !== null) {
+            const beforePause = originalText.substring(lastIndex, match.index);
+            finalHtml += beforePause;
+            
+            const pauseDuration = parseFloat(match[1]);
+            
+            const pauseId = 'pause-' + Date.now() + '-' + Math.round(Math.random() * 10000);
+            
+            const pauseClass = debugMode ? 'pause-marker debug-visible' : 'pause-marker';
+            finalHtml += `<span id="${pauseId}" class="${pauseClass}" 
+                          data-duration="${pauseDuration}">
+                          ${debugMode ? `[暂停:${pauseDuration}]` : ''}
+                          </span>`;
+            
+            pauseMarkers.push({
+                id: pauseId,
+                duration: pauseDuration
+            });
+            
+            lastIndex = match.index + match[0].length;
+        }
+        
+        finalHtml += originalText.substring(lastIndex);
+        
+        teleprompterText.innerHTML = finalHtml;
+        
+        pauseMarkers.forEach(marker => {
+            const element = document.getElementById(marker.id);
+            if (element) {
+                pauseElements.push({
+                    element: element,
+                    id: marker.id,
+                    duration: marker.duration,
+                    position: -1,
+                    processed: false
+                });
+            }
+        });
+        
+        calculatePausePositions();
+    }
+    
+    function calculatePausePositions() {
+        const viewportCenterY = teleprompterContainer.offsetHeight / 2;
+        const containerRect = teleprompterContainer.getBoundingClientRect();
+        
+        pauseElements.forEach(pauseObj => {
+            if (pauseObj.element) {
+                const rect = pauseObj.element.getBoundingClientRect();
+                const elementTop = rect.top - containerRect.top;
+                pauseObj.position = elementTop - viewportCenterY;
+            }
+        });
+        
+        pauseElements.sort((a, b) => a.position - b.position);
+    }
+    
+    function recalculatePausePositions() {
+        calculatePausePositions();
+        
+        pauseElements.forEach(pauseObj => {
+            if (pauseObj.position > -currentScrollTop) {
+                pauseObj.processed = false;
+            }
+        });
+        
+        currentPauseIndex = -1;
+        for (let i = 0; i < pauseElements.length; i++) {
+            if (!pauseElements[i].processed) {
+                currentPauseIndex = i;
+                break;
+            }
+        }
+    }
+    
+    function startPrompter() {
+        currentScrollTop = 0;
+        totalDistance = 0;
+        lastTimestamp = 0;
+        currentPauseIndex = 0;
+        teleprompterText.style.top = '0px';
+        
+        pauseElements.forEach(pauseObj => {
+            pauseObj.processed = false;
+        });
+        
+        calculatePausePositions();
+        
+        startScrolling();
+    }
+    
+    function stopScrolling() {
+        if (animationId !== null) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+        isRunning = false;
+    }
+    
+    function startScrolling() {
+        if (animationId !== null) {
+            cancelAnimationFrame(animationId);
+        }
+        
+        isRunning = true;
+        lastTimestamp = performance.now();
+        animationId = requestAnimationFrame(scroll);
+    }
+    
+    function scroll(timestamp) {
+        if (!isRunning) return;
+        
+        const elapsed = timestamp - lastTimestamp;
+        lastTimestamp = timestamp;
+        
+        const frameSpeed = scrollSpeed * elapsed / 16.67;
+        
+        totalDistance += frameSpeed;
+        
+        currentScrollTop = totalDistance;
+        
+        teleprompterText.style.top = `-${Math.round(currentScrollTop)}px`;
+        
+        if (currentPauseIndex >= 0 && currentPauseIndex < pauseElements.length) {
+            const pauseObj = pauseElements[currentPauseIndex];
+            
+            if (!pauseObj.processed && pauseObj.position <= currentScrollTop) {
+                pauseObj.processed = true;
+                
+                const exactPosition = pauseObj.position;
+                const adjustment = currentScrollTop - exactPosition;
+                
+                if (Math.abs(adjustment) > 0) {
+                    currentScrollTop = exactPosition;
+                    totalDistance = currentScrollTop;
+                    teleprompterText.style.top = `-${Math.round(currentScrollTop)}px`;
+                }
+                
+                stopScrolling();
+                
+                activePauseTimeout = setTimeout(() => {
+                    if (!userPaused) {
+                        currentPauseIndex++;
+                        startScrolling();
+                    }
+                    activePauseTimeout = null;
+                }, pauseObj.duration * 1000);
+                
+                return;
+            }
+        }
+        
+        const textHeight = teleprompterText.offsetHeight;
+        const viewportHeight = teleprompterContainer.offsetHeight;
+        
+        if (currentScrollTop >= textHeight - viewportHeight / 2) {
+            stopScrolling();
+            
+            pauseButton.disabled = true;
+            resetButton.disabled = false;
+            fsPauseButton.disabled = true;
+            fsResetButton.disabled = false;
+            return;
+        }
+        
+        animationId = requestAnimationFrame(scroll);
+    }
+    
+    teleprompterText.style.width = displayWidth + '%';
+    teleprompterText.style.position = 'absolute';
+    teleprompterText.style.top = '0px';
+    updateHorizontalPosition();
+    teleprompterContainer.style.height = heightControl.value + 'px';
+    updateFontSize(parseInt(fontSizeControl.value));
+    
+    speedValue.textContent = parseFloat(speedControl.value).toFixed(1);
+    if (fsSpeedValue) {
+        fsSpeedValue.textContent = parseFloat(fsSpeedControl.value).toFixed(1);
+    }
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.altKey && e.key === 'd') {
+            debugMode = !debugMode;
+            if (isRunning) {
+                const pauseMarkers = document.querySelectorAll('.pause-marker');
+                pauseMarkers.forEach(marker => {
+                    if (debugMode) {
+                        marker.classList.add('debug-visible');
+                        marker.textContent = `[暂停:${marker.dataset.duration}]`;
+                    } else {
+                        marker.classList.remove('debug-visible');
+                        marker.textContent = '';
+                    }
+                });
+            }
+        }
+    });
+});
+    </script>
+</body>
+</html>
